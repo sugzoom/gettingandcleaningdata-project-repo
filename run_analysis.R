@@ -37,8 +37,6 @@ colnames(x_all) = as.character(features[[2]])
 colnames(y_all)=c("class_labels")
 colnames(subj_all)=c("subject_labels")
 
-#clean-up
-rm(features)
 
 ##Combine "all" data frames into single data frame
 ##create character versions of "subj_all" and "y_all" data frames
@@ -61,4 +59,29 @@ rm(all_data_tmp)
 all_data$subject_labels = as.factor(all_data$subject_labels)
 all_data$activity_names = as.factor(all_data$activity_names)
 
+##isolate "mean" and "sd" variables
+#create regexp vector to locate mean and sd variables
+match_regexp = c("mean\\(\\)", "std\\(\\)")
+#get values returned and check
+matches = unique (grep(paste(match_regexp,collapse="|"),features$V2,value=TRUE))
+#get matching indices and add 2 in order to account 
+#for additional columns in all_data
+matchesind = unique (grep(paste(match_regexp,collapse="|"),features$V2)) + 2
+#add "1" and "2" indexes to matchesind
+colinds = c(1,2,matchesind)
 
+##Create sub set of only "mean" and "std" variables
+##by subsetting target columns as new data frame
+all_data_ms = all_data[colinds]
+#clean-up
+rm(colinds,match_regexp,matches,matchesind)
+
+##Calculate averages over variables by subject and activity
+#create "molten" data frame to ease task
+molten.ds = melt(all_data_ms,id = c("activity_names","subject_labels"))
+#create data frame containing average values for all "mean" and "sd" 
+#variables by subject and activity
+tidy_data = dcast(molten.ds,formula=activity_names+subject_labels~variable,mean)
+
+##Write tidy_data to a flat file
+write.table(tidy_data, file="./tidydata.txt", sep="\t", row.names=FALSE)
